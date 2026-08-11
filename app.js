@@ -122,7 +122,7 @@
     vault: [],
   };
 
-  let mode = "personal";
+  let mode = "auto";  // режим определяется по тексту, у человека не спрашиваем
   let lastResult = null;
   let vaultFilter = "all";
 
@@ -159,6 +159,7 @@
   function setMode(m) {
     mode = m;
     $$(".mode").forEach((b) => b.classList.toggle("active", b.dataset.mode === m));
+    if (m !== "vault") mode = "auto";
     if (m === "vault") {
       setView("vault");
       renderVault();
@@ -172,8 +173,10 @@
   }
 
   function renderExamples() {
+    const box = $("#examples");
+    if (!box) return;
     const list = EXAMPLES[mode] || [];
-    $("#examples").innerHTML = list
+    box.innerHTML = list
       .map(
         (ex, i) =>
           `<button type="button" class="ex" data-i="${i}"><strong>${ex.title}</strong>${ex.text.slice(0, 90).replace(/\n/g, " ")}…</button>`
@@ -512,8 +515,30 @@
     return bullets;
   }
 
+  /**
+   * Режим определяется по тексту. У человека не спрашиваем —
+   * он не обязан классифицировать своё сообщение за нас.
+   */
+  function detectMode(text) {
+    const t = text.toLowerCase();
+    const work = [
+      "клиент", "дедлайн", "созвон", "тз", "релиз", "демо", "api",
+      "отчёт", "отчет", "коллег", "проект", "вакан", "figma", "pm",
+      "статус", "блокер", "заявк", "счёт", "счет", "договор", "оплат",
+      "подряд", "смета", "акт", "накладн",
+    ].filter((w) => t.includes(w)).length;
+
+    if (work >= 2) return "work";
+    if (/клиент/.test(t) && /статус/.test(t)) return "work";
+    return "personal";
+  }
+
   function analyze(text, modeName, role) {
     const raw = normalize(text);
+    // "auto" или ничего — определяем сами.
+    if (!modeName || modeName === "auto" || modeName === "vault") {
+      modeName = detectMode(raw);
+    }
     const meta = scorePriority(raw, modeName);
     const need = pickNeed(raw, meta, modeName);
     const todos = buildTodos(raw, meta, modeName);
@@ -768,7 +793,7 @@
   }
 
   function bind() {
-    $$(".mode").forEach((b) => b.addEventListener("click", () => setMode(b.dataset.mode)));
+    $$("[data-mode]").forEach((b) => b.addEventListener("click", () => setMode(b.dataset.mode)));
 
     $("#raw-input").addEventListener("input", () => {
       $("#btn-run").disabled = $("#raw-input").value.trim().length < 8;
