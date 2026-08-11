@@ -583,6 +583,96 @@
     return !!(window.PrismQueue && window.PrismQueue.splitItems);
   }
 
+  // ——— Разобранное, отмена, недельный итог ———
+
+  let lastQueue = null;
+  let undoAction = null;
+
+  /** Отмена последнего действия (Gmail): 6 секунд на передумать. */
+  function offerUndo(text, restore) {
+    undoAction = restore;
+    const el = $("#toast");
+    el.innerHTML = `${escapeHtml(text)} <button type="button" id="undo-btn">Отменить</button>`;
+    el.classList.remove("hidden");
+    clearTimeout(toast._t);
+    const btn = $("#undo-btn");
+    if (btn) {
+      btn.addEventListener("click", () => {
+        if (undoAction) undoAction();
+        undoAction = null;
+        el.classList.add("hidden");
+      });
+    }
+    toast._t = setTimeout(() => {
+      el.classList.add("hidden");
+      undoAction = null;
+    }, 6000);
+  }
+
+  function markDone(num) {
+    if (!lastQueue) return;
+    const idx = lastQueue.need.findIndex((i) => i.num === num);
+    if (idx < 0) return;
+    const [item] = lastQueue.need.splice(idx, 1);
+    bumpStat("done");
+    paintQueue(lastQueue);
+    offerUndo("Убрано из списка.", () => {
+      lastQueue.need.splice(idx, 0, item);
+      bumpStat("done", -1);
+      paintQueue(lastQueue);
+    });
+  }
+
+  /** Недельный итог (Wrapped): считаем разобранное, показываем и делимся. */
+  const STATS_KEY = "prism_stats_v1";
+
+  function loadStats() {
+    try {
+      return JSON.parse(localStorage.getItem(STATS_KEY) || "{}");
+    } catch (_) {
+      return {};
+    }
+  }
+
+  function weekKey(d) {
+    d = d || new Date();
+    const t = new Date(d.getFullYear(), d.getMonth(), d.getDate() - ((d.getDay() + 6) % 7));
+    return `${t.getFullYear()}-${pad(t.getMonth() + 1)}-${pad(t.getDate())}`;
+  }
+
+  function bumpStat(field, by) {
+    const s = loadStats();
+    const k = weekKey();
+    s[k] = s[k] || { parsed: 0, items: 0, done: 0 };
+    s[k][field] = Math.max(0, (s[k][field] || 0) + (by === undefined ? 1 : by));
+    try {
+      localStorage.setItem(STATS_KEY, JSON.stringify(s));
+    } catch (_) {}
+    renderWeek();
+  }
+
+  function renderWeek() {
+    const el = $("#week-line");
+    if (!el) return;
+    const s = loadStats()[weekKey()] || { parsed: 0, items: 0, done: 0 };
+    if (!s.parsed) {
+      el.textContent = "";
+      el.classList.add("hidden");
+      return;
+    }
+    el.classList.remove("hidden");
+    el.textContent =
+      `За неделю: разобрано ${s.items || s.parsed}, закрыто ${s.done}`;
+  }
+
+  function weekShareText() {
+    const s = loadStats()[weekKey()] || { parsed: 0, items: 0, done: 0 };
+    return (
+      `За неделю PRISM разобрал ${s.items || s.parsed} сообщений, ` +
+      `из них требовали меня ${s.done}.\n\nБот: https://t.me/xPRISMxbot`
+    );
+  }
+
   /** Экран очереди: точное число сверху, до 5 строк, честный хвост. */
   function paintQueue(res) {
     const need = res.need || [];
@@ -590,24 +680,36 @@
       ? `Требуют тебя: ${need.length} из ${res.total}`
       : `Ничего срочного. Разобрал ${res.total}`;
 
+    // Одно решение на карточку (Tinder): «Готово» — и она уходит.
     $("#q-list").innerHTML = need
       .map((it) => {
         const who = it.sender !== "без отправителя" ? it.sender : `#${it.num}`;
         const what = escapeHtml(clip(it.text, 70));
         const why = escapeHtml(cap((it.why || []).slice(0, 2).join(" · ")));
-        return `<article class="q-item">
+        return `<article class="q-item" data-num="${it.num}">
             <div class="q-who">${escapeHtml(who)}</div>
             <div class="q-what">${what}</div>
             ${why ? `<div class="q-why">${why}</div>` : ""}
+            <button type="button" class="q-done" data-done="${it.num}">Готово</button>
           </article>`;
       })
       .join("");
+
+    $$("#q-list [data-done]").forEach((b) => {
+      b.addEventListener("click", () => markDone(Number(b.dataset.done)));
+    });
 
     const tail = [];
     if (res.later && res.later.length) tail.push(`Остальные ${res.later.length} — не требуют тебя.`);
     if (res.robots && res.robots.length) tail.push(`Рассылок отсеяно: ${res.robots.length}`);
     if (res.dropped) tail.push(`⚠ Не поместилось: ${res.dropped}. Раздели пачку.`);
     $("#q-tail").textContent = tail.join(" ");
+  }
+
+  function daysWordJs(n) {
+    if (n % 10 === 1 && n % 100 !== 11) return "день";
+    if (n % 10 >= 2 && n % 10 <= 4 && !(n % 100 >= 12 && n % 100 <= 14)) return "дня";
+    return "дней";
   }
 
   function clip(s, n) {
@@ -633,11 +735,16 @@
     if (global_PrismQueue()) {
       const items = window.PrismQueue.splitItems(text);
       if (items.length >= 2) {
-        paintQueue(window.PrismQueue.analyzeQueue(items));
+        lastQueue = window.PrismQueue.analyzeQueue(items);
+        bumpStat("parsed");
+        bumpStat("items", items.length);
+        paintQueue(lastQueue);
         setView("queue");
         return;
       }
     }
+    bumpStat("parsed");
+    bumpStat("items");
 
     const roleEl = $("#role-select");
     const role = roleEl ? roleEl.value : "me";
@@ -788,7 +895,13 @@
           hour: "2-digit",
           minute: "2-digit",
         });
-        return `<article class="vault-item" data-id="${i.id}">
+        // Заметка истекает сама (Stories): через 30 дней спрашиваем, нужна ли.
+        const days = Math.floor((Date.now() - i.createdAt) / 86400000);
+        const expired = i.actual && days >= 30;
+        return `<article class="vault-item${expired ? " expired" : ""}" data-id="${i.id}">
+          ${expired ? `<div class="v-ask">Лежит ${days} ${daysWordJs(days)}. Это ещё нужно?
+            <button type="button" data-act="keep">нужно</button>
+            <button type="button" data-act="del">убрать</button></div>` : ""}
           <div class="v-top">
             <span class="v-p">${escapeHtml(humanPriority(i.priority))}</span>
             <span class="v-cat">${i.mode} · ${i.actual ? "актуально" : "устарело"} · ${date}</span>
@@ -813,9 +926,22 @@
           if (!item) return;
           const act = btn.dataset.act;
           if (act === "del") {
-            saveVault(all.filter((x) => x.id !== id));
+            const rest = all.filter((x) => x.id !== id);
+            saveVault(rest);
             renderVault();
-            toast("Удалено");
+            offerUndo("Удалено.", () => {
+              const back = loadVault();
+              back.push(item);
+              back.sort((a, b) => b.createdAt - a.createdAt);
+              saveVault(back);
+              renderVault();
+            });
+          } else if (act === "keep") {
+            // «Нужно» продлевает жизнь заметки ещё на 30 дней.
+            item.createdAt = Date.now();
+            saveVault(all);
+            renderVault();
+            toast("Оставили. Спросим снова через 30 дней");
           } else if (act === "stale") {
             item.actual = !item.actual;
             saveVault(all);
@@ -880,6 +1006,12 @@
       copy(lastResult.reply);
       toast("Ответ скопирован — вставляй в чат");
     };
+    const weekBtn = $("#week-line");
+    if (weekBtn) weekBtn.addEventListener("click", () => {
+      copy(weekShareText());
+      toast("Итог недели скопирован — можно отправить");
+    });
+
     const btnBackQ = $("#btn-back-q");
     if (btnBackQ) btnBackQ.addEventListener("click", () => setView("input"));
 
@@ -910,6 +1042,7 @@
       tick();
       setInterval(tick, 1000);
       setMode("personal");
+    renderWeek();
     } catch (err) {
       console.error("PRISM init error", err);
     } finally {
