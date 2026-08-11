@@ -395,35 +395,36 @@ select {
 }
 .linkish { color: var(--champagne); font-size: 12px; font-weight: 600; }
 .linkish:hover { color: var(--steel-hi); }
-.priority-banner {
-  display: grid;
-  grid-template-columns: 52px 1fr;
-  gap: 12px;
+/* Вердикт — одна строка с точкой цветом. Без плашек и значков. */
+.verdict {
+  display: flex;
   align-items: center;
-  padding: 12px;
-  border-radius: 16px;
-  border: 1px solid var(--line);
-  margin-bottom: 10px;
-  background: var(--surface);
-}
-.p-code {
-  width: 52px; height: 52px;
-  border-radius: 14px;
-  display: grid; place-items: center;
-  font-family: var(--display);
-  font-weight: 600;
-  font-size: 17px;
+  gap: 8px;
+  font-size: 13px;
   letter-spacing: 0.02em;
-  color: #14171a;
-  background: var(--p1);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.22);
+  color: var(--muted);
+  margin-bottom: 14px;
 }
-.priority-banner.p0 .p-code { background: var(--p0); color: #fdf3f1; }
-.priority-banner.p1 .p-code { background: var(--p1); }
-.priority-banner.p2 .p-code { background: var(--p2); color: #10141a; }
-.priority-banner.p3 .p-code { background: var(--p3); color: #e6e9eb; }
-.p-name { font-family: var(--display); font-weight: 600; font-size: 17px; color: var(--steel-hi); }
-.p-why { font-size: 12px; color: var(--muted); line-height: 1.4; margin-top: 3px; }
+.verdict .dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: var(--p2);
+  flex: 0 0 auto;
+}
+.verdict.p0 .dot { background: var(--p0); }
+.verdict.p1 .dot { background: var(--p1); }
+.verdict.p2 .dot { background: var(--p2); }
+.verdict.p3 .dot { background: var(--p3); }
+.verdict.p0 { color: #d5867b; }
+
+/* Что от тебя хотят — главное на экране, без подписи над ним. */
+.need {
+  font-size: 19px;
+  line-height: 1.35;
+  font-weight: 600;
+  color: var(--steel-hi);
+  margin-bottom: 16px;
+}
 
 .flags { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
 .flag {
@@ -482,13 +483,28 @@ select {
 .todo .tag.later { background: rgba(126, 141, 155, 0.20); color: #a3b3c0; }
 .todo .tag.skip { background: rgba(106, 112, 117, 0.30); color: #a4aab0; }
 
+/* Готовый ответ. Единственный блок с рамкой — его забирают. */
 .reply-pre {
   white-space: pre-wrap;
   font-family: var(--font);
-  font-size: 13px;
+  font-size: 15px;
   line-height: 1.5;
-  color: rgba(233, 235, 237, 0.94);
+  color: var(--text);
+  padding: 14px;
+  border-radius: 14px;
+  border: 1px solid var(--line-strong);
+  background: var(--surface);
+  margin-bottom: 12px;
 }
+.linkish.sub {
+  display: block;
+  width: 100%;
+  text-align: center;
+  margin-top: 12px;
+  color: var(--dim);
+  font-weight: 500;
+}
+.linkish.sub:hover { color: var(--muted); }
 .bullets { padding-left: 16px; font-size: 12.5px; color: var(--muted); line-height: 1.5; }
 .bullets li { margin-bottom: 5px; }
 .bullets li::marker { color: var(--steel-deep); }

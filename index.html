@@ -123,33 +123,18 @@
             <span class="mono dim" id="result-mode">—</span>
           </div>
 
-          <div class="priority-banner" id="priority-banner">
-            <div class="p-code" id="p-code">P1</div>
-            <div>
-              <div class="p-name" id="p-name">Важно</div>
-              <div class="p-why" id="p-why">—</div>
-            </div>
+          <div class="verdict" id="priority-banner">
+            <span class="dot"></span><span id="p-name">Не срочно</span>
           </div>
+
+          <p id="need-text" class="need">—</p>
 
           <div class="flags" id="flags"></div>
 
-          <article class="card accent" id="need-card">
-            <div class="mono label">ЧТО ОТ ТЕБЯ ХОТЯТ</div>
-            <p id="need-text" class="body-text strong">—</p>
-          </article>
+          <pre id="reply-text" class="reply-pre">—</pre>
 
-          <article class="card" id="reply-card">
-            <div class="row-between">
-              <div class="mono label">ОТВЕТ — МОЖНО ОТПРАВЛЯТЬ</div>
-              <button type="button" class="linkish" id="btn-copy-reply">копировать</button>
-            </div>
-            <pre id="reply-text" class="reply-pre">—</pre>
-          </article>
-
-          <div class="result-actions">
-            <button type="button" class="btn primary block" id="btn-copy-reply-2">Скопировать ответ</button>
-            <button type="button" class="btn ghost block" id="btn-save">Сохранить в заметки</button>
-          </div>
+          <button type="button" class="btn primary block" id="btn-copy-reply">Скопировать ответ</button>
+          <button type="button" class="linkish sub" id="btn-save">Сохранить</button>
         </section>
 
         <section class="view" id="view-vault" data-view="vault">

@@ -356,6 +356,11 @@
     };
   }
 
+  // Два случая, когда просить нечего. Ответ обязан им соответствовать,
+  // иначе карточка сама себе противоречит.
+  const NO_REQUEST = "Ничего. Можно не отвечать.";
+  const WAITING_ONLY = "Ждут ответа, но что именно нужно — не написано.";
+
   /**
    * Короткая суть запроса. Никогда не возвращает исходный текст —
    * если сказать нечего, честно говорит, что просьбы не видно.
@@ -386,9 +391,7 @@
     }
 
     if (!uniq.length) {
-      return meta.waitMe
-        ? "Ждут твоего ответа, но конкретной просьбы в тексте нет."
-        : "Просьбы к тебе не видно — можно не отвечать.";
+      return meta.waitMe ? WAITING_ONLY : NO_REQUEST;
     }
 
     let need = uniq.join(", ");
@@ -399,7 +402,7 @@
 
   function buildTodos(text, meta, modeName) {
     const todos = [];
-    if (meta.waitMe || meta.priority.code === "P0" || meta.priority.code === "P1") {
+    if (meta.waitMe || meta.priority.cls === "p0" || meta.priority.cls === "p1") {
       todos.push({ tag: "do", text: "Ответить по сути (черновик ниже) — не оставлять прочитанным без реакции" });
     }
     if (meta.deadlines.length) {
@@ -414,7 +417,7 @@
     if (modeName === "docs") {
       todos.push({ tag: "do", text: "Выписать противоречивые пункты и согласовать один вариант" });
     }
-    if (meta.fyi || meta.priority.code === "P3") {
+    if (meta.fyi || meta.priority.cls === "p3") {
       todos.push({ tag: "skip", text: "Можно не делать задач — положить в «прочитано»" });
     } else {
       todos.push({ tag: "later", text: "Если не успеваешь — написать срок/альтернативу (не молчать)" });
@@ -422,7 +425,20 @@
     return todos.slice(0, 4);
   }
 
-  function buildReply(text, meta, modeName, role) {
+  function buildReply(text, meta, modeName, role, need) {
+    // Ответ обязан соответствовать выводу: если просьбы нет — не обещаем помощь.
+    if (need === NO_REQUEST || need === WAITING_ONLY) {
+      if (modeName === "work") {
+        return "Принял, спасибо.";
+      }
+      if (/боль|болел|врач|больниц|стоматолог|устал|тяжко|плохо/i.test(text)) {
+        return "Ох, сочувствую. Держись!";
+      }
+      if (need === WAITING_ONLY) {
+        return "Привет! Прочитал. Что нужно от меня?";
+      }
+      return "Привет! Понял тебя, спасибо, что написал.";
+    }
     if (modeName === "news") {
       return "Сводка для себя (не в чат):\n" + summarizeBullets(text, 5).map((b, i) => `${i + 1}. ${b}`).join("\n");
     }
@@ -440,22 +456,22 @@
       return "Понял тебя) Спасибо, что рассказал. Давай на связи.";
     }
 
+    // Коротко. Ответ должен читаться за секунду и отправляться как есть.
     const dl = meta.deadlines[0] ? ` к «${meta.deadlines[0]}»` : "";
     if (modeName === "work") {
-      if (meta.waitMe) {
-        return `Принял, беру в работу${dl}. Сегодня пришлю статус: что готово и что успеваю к сроку. Если увижу риск не успеть — скажу сразу, не в последний момент.`;
-      }
-      return `Спасибо, вижу. Уточни, пожалуйста, что нужно от меня и к какому времени — зафиксирую и вернусь со статусом.`;
+      return meta.waitMe
+        ? `Принял, беру в работу${dl}. Пришлю статус.`
+        : `Спасибо. Что нужно от меня и к какому сроку?`;
     }
 
     // personal
     if (/созвон|вечером|минут|позвони/i.test(text)) {
-      return `Привет! Да, я тут. Давай сегодня после 20:00, минут на 30 — удобно? Если нет, напиши, когда тебе лучше. Файл кидай сюда, посмотрю.`;
+      return `Привет! Давай сегодня после 20:00 — удобно?`;
     }
     if (meta.money.length && /долг|верни|вернуть|верну|отда/i.test(text)) {
-      return `Привет! Понял тебя${dl}. Помогу — давай спишемся вечером и разберём. По ${meta.money[0]} тоже решим, не переживай.`;
+      return `Привет! Понял. По ${meta.money[0]} решим, спишемся вечером.`;
     }
-    return `Привет! Понял${dl}. Помогу — скажи, когда тебе удобно созвониться или напиши подробнее, и я включусь.`;
+    return `Привет! Понял, помогу${dl}. Напиши подробнее.`;
   }
 
   function summarizeBullets(text, max) {
@@ -507,7 +523,7 @@
     const meta = scorePriority(raw, modeName);
     const need = pickNeed(raw, meta, modeName);
     const todos = buildTodos(raw, meta, modeName);
-    const reply = buildReply(raw, meta, modeName, role);
+    const reply = buildReply(raw, meta, modeName, role, need);
     let bullets = summarizeBullets(raw, modeName === "news" ? 8 : 5);
     let bulletsLabel = "КЛЮЧЕВЫЕ ФРАГМЕНТЫ ИЗ ТЕКСТА";
 
@@ -563,10 +579,8 @@
     const set = (sel, fn) => { const el = $(sel); if (el) fn(el); };
 
     set("#result-mode", (el) => { el.textContent = MODE_META[r.mode]?.label || r.mode; });
-    set("#priority-banner", (el) => { el.className = "priority-banner " + r.priority.cls; });
-    set("#p-code", (el) => { el.textContent = r.priority.code; });
+    set("#priority-banner", (el) => { el.className = "verdict " + r.priority.cls; });
     set("#p-name", (el) => { el.textContent = r.priority.name; });
-    set("#p-why", (el) => { el.textContent = r.why; });
     set("#flags", (el) => {
       el.innerHTML = r.flags.map((f) => `<span class="flag ${f.c}">${f.t}</span>`).join("");
     });
@@ -608,7 +622,7 @@
 
   function fullDump(r) {
     return [
-      `PRISM · ${r.priority.code} ${r.priority.name}`,
+      `PRISM · ${r.priority.name}`,
       `Почему: ${r.why}`,
       ``,
       `Контекст: ${r.context}`,
@@ -643,7 +657,7 @@
     items.unshift({
       id: String(Date.now()),
       mode: lastResult.mode,
-      priority: lastResult.priority.code,
+      priority: lastResult.priority.name,
       title: lastResult.need.slice(0, 80),
       why: lastResult.why,
       context: lastResult.context,
@@ -654,6 +668,19 @@
     });
     saveVault(items.slice(0, 100));
     toast("Сохранено в знания (на этом устройстве)");
+  }
+
+  // Заметки, сохранённые до перехода на человеческий язык, до сих пор
+  // хранят P0-P3 в памяти телефона. Показываем их словами.
+  const OLD_CODES = {
+    P0: "Ждут сегодня",
+    P1: "Ответить в пару дней",
+    P2: "Не срочно",
+    P3: "Можно не отвечать",
+  };
+
+  function humanPriority(p) {
+    return OLD_CODES[String(p || "").trim()] || p || "";
   }
 
   function renderVault() {
@@ -686,7 +713,7 @@
         });
         return `<article class="vault-item" data-id="${i.id}">
           <div class="v-top">
-            <span class="v-p">${i.priority}</span>
+            <span class="v-p">${escapeHtml(humanPriority(i.priority))}</span>
             <span class="v-cat">${i.mode} · ${i.actual ? "актуально" : "устарело"} · ${date}</span>
           </div>
           <div class="v-title">${escapeHtml(i.title)}</div>
@@ -776,10 +803,8 @@
       copy(lastResult.reply);
       toast("Ответ скопирован — вставляй в чат");
     };
-    ["#btn-copy-reply", "#btn-copy-reply-2"].forEach((sel) => {
-      const el = $(sel);
-      if (el) el.addEventListener("click", copyReply);
-    });
+    const btnCopy = $("#btn-copy-reply");
+    if (btnCopy) btnCopy.addEventListener("click", copyReply);
     const btnAll = $("#btn-copy-all");
     if (btnAll) {
       btnAll.addEventListener("click", () => {
