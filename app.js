@@ -579,6 +579,49 @@
     };
   }
 
+  function global_PrismQueue() {
+    return !!(window.PrismQueue && window.PrismQueue.splitItems);
+  }
+
+  /** Экран очереди: точное число сверху, до 5 строк, честный хвост. */
+  function paintQueue(res) {
+    const need = res.need || [];
+    $("#q-count").textContent = need.length
+      ? `Требуют тебя: ${need.length} из ${res.total}`
+      : `Ничего срочного. Разобрал ${res.total}`;
+
+    $("#q-list").innerHTML = need
+      .map((it) => {
+        const who = it.sender !== "без отправителя" ? it.sender : `#${it.num}`;
+        const what = escapeHtml(clip(it.text, 70));
+        const why = escapeHtml(cap((it.why || []).slice(0, 2).join(" · ")));
+        return `<article class="q-item">
+            <div class="q-who">${escapeHtml(who)}</div>
+            <div class="q-what">${what}</div>
+            ${why ? `<div class="q-why">${why}</div>` : ""}
+          </article>`;
+      })
+      .join("");
+
+    const tail = [];
+    if (res.later && res.later.length) tail.push(`Остальные ${res.later.length} — не требуют тебя.`);
+    if (res.robots && res.robots.length) tail.push(`Рассылок отсеяно: ${res.robots.length}`);
+    if (res.dropped) tail.push(`⚠ Не поместилось: ${res.dropped}. Раздели пачку.`);
+    $("#q-tail").textContent = tail.join(" ");
+  }
+
+  function clip(s, n) {
+    s = (s || "").replace(/\s+/g, " ").trim();
+    if (s.length <= n) return s;
+    let cut = s.slice(0, n - 1);
+    if (cut.includes(" ")) cut = cut.slice(0, cut.lastIndexOf(" "));
+    return cut + "…";
+  }
+
+  function cap(s) {
+    return s ? s.charAt(0).toUpperCase() + s.slice(1) : s;
+  }
+
   async function run() {
     const text = $("#raw-input").value.trim();
     if (text.length < 8) {
@@ -586,6 +629,16 @@
       return;
     }
     // Без искусственной задержки: разбор мгновенный, скорость — и есть смысл.
+    // Одно сообщение или пачка — решаем сами, у человека не спрашиваем.
+    if (global_PrismQueue()) {
+      const items = window.PrismQueue.splitItems(text);
+      if (items.length >= 2) {
+        paintQueue(window.PrismQueue.analyzeQueue(items));
+        setView("queue");
+        return;
+      }
+    }
+
     const roleEl = $("#role-select");
     const role = roleEl ? roleEl.value : "me";
     lastResult = analyze(text, mode, role);
@@ -827,6 +880,9 @@
       copy(lastResult.reply);
       toast("Ответ скопирован — вставляй в чат");
     };
+    const btnBackQ = $("#btn-back-q");
+    if (btnBackQ) btnBackQ.addEventListener("click", () => setView("input"));
+
     const btnCopy = $("#btn-copy-reply");
     if (btnCopy) btnCopy.addEventListener("click", copyReply);
     const btnAll = $("#btn-copy-all");

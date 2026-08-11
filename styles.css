@@ -63,8 +63,8 @@ button { border: 0; background: none; cursor: pointer; }
 .stage {
   min-height: 100%;
   display: grid;
-  grid-template-columns: minmax(260px, 1fr) minmax(340px, 400px);
-  gap: 44px;
+  grid-template-columns: 1fr;
+  gap: 0;
   align-items: center;
   max-width: 1100px;
   margin: 0 auto;
@@ -482,6 +482,42 @@ select {
 .todo .tag.do { background: rgba(138, 160, 141, 0.20); color: var(--ok); }
 .todo .tag.later { background: rgba(126, 141, 155, 0.20); color: #a3b3c0; }
 .todo .tag.skip { background: rgba(106, 112, 117, 0.30); color: #a4aab0; }
+
+/* Экран очереди: число сверху, до 5 строк, честный хвост. */
+.q-count {
+  font-size: 19px;
+  font-weight: 600;
+  color: var(--steel-hi);
+  margin-bottom: 16px;
+}
+.q-item {
+  padding: 13px 0;
+  border-bottom: 1px solid var(--line);
+}
+.q-item:last-child { border-bottom: 0; }
+.q-who {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--steel-hi);
+  margin-bottom: 3px;
+}
+.q-what {
+  font-size: 14px;
+  line-height: 1.4;
+  color: var(--muted);
+}
+.q-why {
+  font-size: 12.5px;
+  color: var(--champagne);
+  margin-top: 5px;
+  opacity: 0.85;
+}
+.q-tail {
+  font-size: 12.5px;
+  color: var(--dim);
+  margin-top: 18px;
+  line-height: 1.5;
+}
 
 /* Готовый ответ. Единственный блок с рамкой — его забирают. */
 .reply-pre {

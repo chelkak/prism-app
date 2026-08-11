@@ -39,24 +39,7 @@
 </head>
 <body>
   <div class="stage">
-    <aside class="brief">
-      <span class="mono tag">НЕ СДАЁМСЯ · v4 NATURAL</span>
-      <div class="brief-logo" aria-hidden="true">
-        <svg viewBox="0 0 64 64" class="mark-svg"><use href="#prism-mark"/></svg>
-      </div>
-      <h1>PRISM</h1>
-      <p class="motto">«Ясно из шума — доступно каждому.»</p>
-      <p class="brief-lead">
-        Не Slack для корпораций. Не Copilot для офиса.<br />
-        <strong>Для людей 30–50 в Telegram:</strong> понял важность → что сделать → сохранил в простые знания.
-      </p>
-      <ul class="brief-list">
-        <li>То, чего нет «для жены / 1С / обычного чата» — в одном месте</li>
-        <li>Натуральные цвета, знак-призма, время</li>
-        <li>Сначала польза, потом подписка</li>
-      </ul>
-      <p class="brief-foot mono">Девиз · PRODUCT.md · COUNCIL.md</p>
-    </aside>
+    
 
     <div class="device">
       <div class="device-bg"></div>
@@ -105,6 +88,15 @@
             <p class="process-title mono" id="process-title">REFRACT</p>
             <p class="process-line" id="process-line">Преломляю поток…</p>
           </div>
+        </section>
+
+        <section class="view" id="view-queue" data-view="queue">
+          <div class="result-top">
+            <button type="button" class="linkish" id="btn-back-q">← Назад</button>
+          </div>
+          <p class="q-count" id="q-count">—</p>
+          <div id="q-list"></div>
+          <p class="q-tail" id="q-tail"></p>
         </section>
 
         <section class="view" id="view-result" data-view="result">
@@ -171,6 +163,7 @@
   </svg>
 
   <div class="toast hidden" id="toast"></div>
+  <script src="queue.js" defer></script>
   <script src="app.js" defer></script>
   <script>
     // всегда убрать сплэш (если app.js не дошёл)
