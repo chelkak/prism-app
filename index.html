@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+  <meta name="theme-color" content="#141210" />
+  <title>PRISM — ясно. просто. твоё.</title>
+  <!-- Без Google Fonts: в Telegram WebView они часто вешают загрузку -->
+  <link rel="stylesheet" href="styles.css" />
+  <style>
+    /* страховка: сплэш сам исчезнет, даже если JS упал */
+    .splash { animation: splashAutoHide 0.01s ease 1.1s forwards; }
+    @keyframes splashAutoHide {
+      to { opacity: 0; visibility: hidden; pointer-events: none; }
+    }
+  </style>
+  <script src="telegram-web-app.js"></script>
+  <script>
+    // если SDK не поднялся — заглушка, иначе Telegram крутит вечный лоадер
+    (function () {
+      if (!window.Telegram) window.Telegram = {};
+      if (!window.Telegram.WebApp) {
+        window.Telegram.WebApp = {
+          ready: function () {},
+          expand: function () {},
+          close: function () {},
+          setHeaderColor: function () {},
+          setBackgroundColor: function () {},
+          initData: "",
+          initDataUnsafe: {},
+          version: "0",
+          platform: "unknown"
+        };
+      }
+      try { window.Telegram.WebApp.ready(); } catch (e) {}
+      try { window.Telegram.WebApp.expand(); } catch (e) {}
+    })();
+  </script>
+</head>
+<body>
+  <div class="stage">
+    <aside class="brief">
+      <span class="mono tag">НЕ СДАЁМСЯ · v4 NATURAL</span>
+      <div class="brief-logo" aria-hidden="true">
+        <svg viewBox="0 0 64 64" class="mark-svg"><use href="#prism-mark"/></svg>
+      </div>
+      <h1>PRISM</h1>
+      <p class="motto">«Ясно из шума — доступно каждому.»</p>
+      <p class="brief-lead">
+        Не Slack для корпораций. Не Copilot для офиса.<br />
+        <strong>Для людей 30–50 в Telegram:</strong> понял важность → что сделать → сохранил в простые знания.
+      </p>
+      <ul class="brief-list">
+        <li>То, чего нет «для жены / 1С / обычного чата» — в одном месте</li>
+        <li>Натуральные цвета, знак-призма, время</li>
+        <li>Сначала польза, потом подписка</li>
+      </ul>
+      <p class="brief-foot mono">Девиз · PRODUCT.md · COUNCIL.md</p>
+    </aside>
+
+    <div class="device">
+      <div class="device-bg"></div>
+      <div class="metal-edge"></div>
+
+      <!-- SPLASH -->
+      <div class="splash" id="splash">
+        <div class="splash-mark">
+          <svg viewBox="0 0 64 64" class="mark-svg lg"><use href="#prism-mark"/></svg>
+        </div>
+        <div class="splash-time mono" id="splash-time">00:00</div>
+        <div class="splash-sub mono">PRISM</div>
+        <div class="splash-motto">ясно из шума</div>
+      </div>
+
+      <header class="tg-bar">
+        <div class="tg-left">
+          <span class="tg-mark" aria-hidden="true">
+            <svg viewBox="0 0 64 64" class="mark-svg sm"><use href="#prism-mark"/></svg>
+          </span>
+          <div>
+            <div class="tg-name">PRISM</div>
+            <div class="tg-sub mono" id="tg-sub">natural · local</div>
+          </div>
+        </div>
+        <div class="tg-right mono" id="clock">—</div>
+      </header>
+
+      <nav class="modes" id="modes">
+        <button type="button" class="mode active" data-mode="personal">Сообщение</button>
+        <button type="button" class="mode" data-mode="work">Работа</button>
+        <button type="button" class="mode" data-mode="news">Новости</button>
+        <button type="button" class="mode" data-mode="vault">Заметки</button>
+        <button type="button" class="mode" data-mode="docs">Документ</button>
+      </nav>
+
+      <div class="viewport">
+        <section class="view active" id="view-input" data-view="input">
+          <div class="mode-hint" id="mode-hint"></div>
+          <div class="examples" id="examples"></div>
+
+          <label class="paste-label mono" for="raw-input">ВСТАВЬ СООБЩЕНИЕ ИЛИ ПЕРЕПИСКУ</label>
+          <textarea id="raw-input" rows="7" placeholder="Как для жены: скопировала длинное сообщение → сюда → ясно, важно ли и что ответить. Потом можно в заметки."></textarea>
+
+          <div class="paste-actions">
+            <button type="button" class="btn ghost" id="btn-clipboard">Из буфера</button>
+            <button type="button" class="btn primary" id="btn-run" disabled>Сделать ясно</button>
+          </div>
+
+          <div class="role-row" id="role-row">
+            <span class="mono dim">Ты в тексте:</span>
+            <select id="role-select">
+              <option value="me">мне пишут</option>
+              <option value="member">участник</option>
+              <option value="lead">ответственный</option>
+            </select>
+          </div>
+
+          <p class="fine mono">Скоро: переслал боту — без копирования. Сейчас: вставь текст. Не сдаёмся.</p>
+        </section>
+
+        <section class="view" id="view-process" data-view="process">
+          <div class="process-center">
+            <div class="process-mark">
+              <svg viewBox="0 0 64 64" class="mark-svg md"><use href="#prism-mark"/></svg>
+            </div>
+            <p class="process-title mono" id="process-title">REFRACT</p>
+            <p class="process-line" id="process-line">Преломляю поток…</p>
+          </div>
+        </section>
+
+        <section class="view" id="view-result" data-view="result">
+          <div class="result-top">
+            <button type="button" class="linkish" id="btn-back">← ещё кусок</button>
+            <span class="mono dim" id="result-mode">—</span>
+          </div>
+
+          <div class="priority-banner" id="priority-banner">
+            <div class="p-code" id="p-code">P1</div>
+            <div>
+              <div class="p-name" id="p-name">Важно</div>
+              <div class="p-why" id="p-why">—</div>
+            </div>
+          </div>
+
+          <div class="flags" id="flags"></div>
+
+          <article class="card">
+            <div class="mono label">КОНТЕКСТ</div>
+            <p id="context-text" class="body-text">—</p>
+          </article>
+
+          <article class="card accent" id="need-card">
+            <div class="mono label">ЧТО ОТ ТЕБЯ НУЖНО</div>
+            <p id="need-text" class="body-text strong">—</p>
+          </article>
+
+          <article class="card">
+            <div class="mono label">СДЕЛАТЬ / ОТЛОЖИТЬ</div>
+            <ul class="todo" id="todo-list"></ul>
+          </article>
+
+          <article class="card" id="reply-card">
+            <div class="row-between">
+              <div class="mono label">ЧЕРНОВИК</div>
+              <button type="button" class="linkish" id="btn-copy-reply">копировать</button>
+            </div>
+            <pre id="reply-text" class="reply-pre">—</pre>
+          </article>
+
+          <article class="card" id="bullets-card">
+            <div class="mono label" id="bullets-label">ФРАГМЕНТЫ</div>
+            <ul class="bullets" id="bullets"></ul>
+          </article>
+
+          <div class="result-actions">
+            <button type="button" class="btn primary block" id="btn-save">Сохранить в заметки</button>
+            <button type="button" class="btn ghost block" id="btn-copy-all">Скопировать всё</button>
+          </div>
+        </section>
+
+        <section class="view" id="view-vault" data-view="vault">
+          <div class="vault-head">
+            <h2 class="screen-h">Заметки</h2>
+            <p class="dim-text">Простой поиск. «Ещё нужно?» — без Obsidian.</p>
+          </div>
+          <input type="search" id="vault-search" class="search" placeholder="Найти…" />
+          <div class="vault-filters" id="vault-filters">
+            <button type="button" class="chip active" data-filter="all">Все</button>
+            <button type="button" class="chip" data-filter="work">Работа</button>
+            <button type="button" class="chip" data-filter="personal">Личка</button>
+            <button type="button" class="chip" data-filter="news">Новости</button>
+            <button type="button" class="chip" data-filter="docs">Доки</button>
+          </div>
+          <div id="vault-list" class="vault-list"></div>
+          <p class="fine mono" id="vault-empty">Пусто. Сделай ясно → «Сохранить в заметки».</p>
+        </section>
+      </div>
+    </div>
+  </div>
+
+  <!-- Shared geometric mark (not a letter) -->
+  <svg xmlns="http://www.w3.org/2000/svg" style="position:absolute;width:0;height:0;overflow:hidden" aria-hidden="true">
+    <defs>
+      <linearGradient id="stoneGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stop-color="#e6d5bc"/>
+        <stop offset="40%" stop-color="#c4a882"/>
+        <stop offset="75%" stop-color="#8a9a7b"/>
+        <stop offset="100%" stop-color="#6b7d5e"/>
+      </linearGradient>
+      <linearGradient id="inkEdge" x1="0%" y1="100%" x2="100%" y2="0%">
+        <stop offset="0%" stop-color="#2a2622" stop-opacity="0.25"/>
+        <stop offset="55%" stop-color="#f0e8dc" stop-opacity="0.55"/>
+        <stop offset="100%" stop-color="#8a9a7b" stop-opacity="0.4"/>
+      </linearGradient>
+      <symbol id="prism-mark" viewBox="0 0 64 64">
+        <path fill="url(#stoneGrad)" d="M32 6 L56 50 L40 50 L32 36 L24 50 L8 50 Z"/>
+        <path fill="url(#inkEdge)" d="M32 6 L40 50 L32 36 Z" opacity="0.5"/>
+        <path stroke="#2a2622" stroke-width="1.15" fill="none" opacity="0.3" d="M28 28 L18 48"/>
+        <path stroke="#f0e8dc" stroke-width="1" fill="none" opacity="0.45" d="M32 22 L32 48"/>
+        <path stroke="#6b7d5e" stroke-width="1.15" fill="none" opacity="0.55" d="M36 28 L46 48"/>
+      </symbol>
+    </defs>
+  </svg>
+
+  <div class="toast hidden" id="toast"></div>
+  <script src="app.js" defer></script>
+  <script>
+    // всегда убрать сплэш (если app.js не дошёл)
+    setTimeout(function () {
+      var el = document.getElementById("splash");
+      if (el) el.classList.add("gone");
+    }, 900);
+  </script>
+</body>
+</html>
