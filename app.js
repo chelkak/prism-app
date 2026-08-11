@@ -162,15 +162,13 @@
     if (m === "vault") {
       setView("vault");
       renderVault();
-      $("#tg-sub").textContent = "v2 · знания";
+      
       return;
     }
     setView("input");
-    $("#mode-hint").textContent = MODE_META[m].hint;
     const roleRow = $("#role-row");
     if (roleRow) roleRow.style.display = m === "news" || m === "docs" ? "none" : "flex";
-    renderExamples();
-    $("#tg-sub").textContent = `v2 · ${MODE_META[m].label.toLowerCase()}`;
+    
   }
 
   function renderExamples() {
@@ -428,16 +426,12 @@
   function buildReply(text, meta, modeName, role, need) {
     // Ответ обязан соответствовать выводу: если просьбы нет — не обещаем помощь.
     if (need === NO_REQUEST || need === WAITING_ONLY) {
-      if (modeName === "work") {
-        return "Принял, спасибо.";
-      }
-      if (/боль|болел|врач|больниц|стоматолог|устал|тяжко|плохо/i.test(text)) {
-        return "Ох, сочувствую. Держись!";
-      }
       if (need === WAITING_ONLY) {
         return "Привет! Прочитал. Что нужно от меня?";
       }
-      return "Привет! Понял тебя, спасибо, что написал.";
+      // Просьбы нет — значит и готового ответа нет. Шаблон вроде
+      // «спасибо, что написал» хуже, чем ничего: его стыдно отправить.
+      return "";
     }
     if (modeName === "news") {
       return "Сводка для себя (не в чат):\n" + summarizeBullets(text, 5).map((b, i) => `${i + 1}. ${b}`).join("\n");
@@ -572,7 +566,7 @@
     lastResult = analyze(text, mode, role);
     paintResult(lastResult);
     setView("result");
-    $("#tg-sub").textContent = "signal ready";
+    
   }
 
   function paintResult(r) {
@@ -585,7 +579,12 @@
       el.innerHTML = r.flags.map((f) => `<span class="flag ${f.c}">${f.t}</span>`).join("");
     });
     set("#need-text", (el) => { el.textContent = r.need; });
-    set("#reply-text", (el) => { el.textContent = r.reply; });
+    const hasReply = !!(r.reply && r.reply.trim());
+    set("#reply-text", (el) => {
+      el.textContent = r.reply || "";
+      el.style.display = hasReply ? "" : "none";
+    });
+    set("#btn-copy-reply", (el) => { el.style.display = hasReply ? "" : "none"; });
 
     // Блоки ниже удалены из интерфейса как дублирующие исходный текст.
     set("#context-text", (el) => { el.textContent = r.context; });
@@ -796,7 +795,7 @@
     }
     $("#btn-back").addEventListener("click", () => {
       setView("input");
-      $("#tg-sub").textContent = `v2 · ${MODE_META[mode].label.toLowerCase()}`;
+      
     });
     const copyReply = () => {
       if (!lastResult) return;

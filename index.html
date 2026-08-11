@@ -79,32 +79,27 @@
           </span>
           <div>
             <div class="tg-name">PRISM</div>
-            <div class="tg-sub mono" id="tg-sub">natural · local</div>
+            <div class="tg-sub" id="tg-sub"></div>
           </div>
         </div>
         <div class="tg-right mono" id="clock">—</div>
       </header>
 
-      <nav class="modes" id="modes">
-        <button type="button" class="mode active" data-mode="personal">Личное</button>
-        <button type="button" class="mode" data-mode="work">Работа</button>
-        <button type="button" class="mode" data-mode="vault">Заметки</button>
-      </nav>
-
       <div class="viewport">
         <section class="view active" id="view-input" data-view="input">
-          <div class="mode-hint" id="mode-hint"></div>
-          <div class="examples" id="examples"></div>
+          <nav class="modes" id="modes">
+            <button type="button" class="mode active" data-mode="personal">Личное</button>
+            <button type="button" class="mode" data-mode="work">Работа</button>
+          </nav>
 
-          <label class="paste-label mono" for="raw-input">ВСТАВЬ СООБЩЕНИЕ ИЛИ ПЕРЕПИСКУ</label>
-          <textarea id="raw-input" rows="7" placeholder="Как для жены: скопировала длинное сообщение → сюда → ясно, важно ли и что ответить. Потом можно в заметки."></textarea>
+          <textarea id="raw-input" rows="8" placeholder="Вставь сюда сообщение или переписку"></textarea>
 
-          <div class="paste-actions">
-            <button type="button" class="btn ghost" id="btn-clipboard">Из буфера</button>
-            <button type="button" class="btn primary" id="btn-run" disabled>Сделать ясно</button>
+          <button type="button" class="btn primary block" id="btn-run" disabled>Разобрать</button>
+          <button type="button" class="linkish sub" id="btn-clipboard">Вставить из буфера</button>
+
+          <div class="foot-links">
+            <button type="button" class="linkish" data-mode="vault">Заметки</button>
           </div>
-
-          <p class="fine mono">Быстрее всего — переслать сообщение боту @xPRISMxbot: без копирования.</p>
         </section>
 
         <section class="view" id="view-process" data-view="process">
@@ -119,8 +114,7 @@
 
         <section class="view" id="view-result" data-view="result">
           <div class="result-top">
-            <button type="button" class="linkish" id="btn-back">← ещё кусок</button>
-            <span class="mono dim" id="result-mode">—</span>
+            <button type="button" class="linkish" id="btn-back">← Назад</button>
           </div>
 
           <div class="verdict" id="priority-banner">
