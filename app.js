@@ -225,8 +225,9 @@
 
   function extractDeadlines(text) {
     const patterns = [
-      /сегодня[^.!\n]{0,40}/gi,
-      /завтра[^.!\n]{0,40}/gi,
+      /(?:сегодня|завтра|послезавтра)\s+до\s+\d{1,2}[:.]\d{2}/gi,
+      /(?:сегодня|завтра|послезавтра)\s+(?:утром|днём|днем|вечером)/gi,
+      /\b(?:сегодня|завтра|послезавтра)\b/gi,
       /до\s+\d{1,2}[:.]\d{2}/gi,
       /до\s+\d{1,2}\s*(января|февраля|марта|апреля|мая|июня|июля|августа|сентября|октября|ноября|декабря)/gi,
       /\d{1,2}[./]\d{1,2}([./]\d{2,4})?/g,
@@ -236,9 +237,17 @@
     const found = [];
     patterns.forEach((re) => {
       const m = text.match(re);
-      if (m) found.push(...m);
+      if (m) found.push(...m.map((x) => x.trim()));
     });
-    return [...new Set(found)].slice(0, 6);
+    // Более длинное совпадение важнее: «завтра до 14:00» вместо «завтра».
+    const uniq = [];
+    for (const x of found) {
+      if (uniq.some((u) => u.toLowerCase().includes(x.toLowerCase()))) continue;
+      const i = uniq.findIndex((u) => x.toLowerCase().includes(u.toLowerCase()));
+      if (i >= 0) uniq[i] = x;
+      else uniq.push(x);
+    }
+    return uniq.slice(0, 6);
   }
 
   function scorePriority(text, modeName) {
@@ -423,8 +432,12 @@
     if (meta.fyi) {
       return "Принял, спасибо. Если что-то понадобится с моей стороны — напишите.";
     }
-    if (meta.priority.code === "P3" && modeName === "personal") {
-      return "Ха, видел) Жив-здоров. Давай на следующей неделе созвонимся/увидимся — кину слоты.";
+    // Ничего не просят — не надо обещать помощь, надо просто по-человечески ответить.
+    if (!meta.waitMe && meta.priority.cls === "p3" && modeName === "personal") {
+      if (/боль|болел|врач|больниц|стоматолог|устал|тяжко|плохо/i.test(text)) {
+        return "Ох, сочувствую. Держись! Как сейчас себя чувствуешь?";
+      }
+      return "Понял тебя) Спасибо, что рассказал. Давай на связи.";
     }
 
     const dl = meta.deadlines[0] ? ` к «${meta.deadlines[0]}»` : "";
