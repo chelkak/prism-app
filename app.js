@@ -25,11 +25,12 @@
   const $ = (s) => document.querySelector(s);
   const $$ = (s) => Array.from(document.querySelectorAll(s));
 
+  // Коды P0-P3 остались внутренними — человеку показываем обычные слова.
   const PRIORITY = {
-    P0: { code: "P0", name: "Горит", cls: "p0" },
-    P1: { code: "P1", name: "Важно", cls: "p1" },
-    P2: { code: "P2", name: "Обычно", cls: "p2" },
-    P3: { code: "P3", name: "Шум / низкий", cls: "p3" },
+    P0: { code: "!", name: "Ждут сегодня", cls: "p0" },
+    P1: { code: "•", name: "Ответить в пару дней", cls: "p1" },
+    P2: { code: "•", name: "Не срочно", cls: "p2" },
+    P3: { code: "—", name: "Можно не отвечать", cls: "p3" },
   };
 
   const MODE_META = {
@@ -166,7 +167,8 @@
     }
     setView("input");
     $("#mode-hint").textContent = MODE_META[m].hint;
-    $("#role-row").style.display = m === "news" || m === "docs" ? "none" : "flex";
+    const roleRow = $("#role-row");
+    if (roleRow) roleRow.style.display = m === "news" || m === "docs" ? "none" : "flex";
     renderExamples();
     $("#tg-sub").textContent = `v2 · ${MODE_META[m].label.toLowerCase()}`;
   }
@@ -345,17 +347,45 @@
     };
   }
 
+  /**
+   * Короткая суть запроса. Никогда не возвращает исходный текст —
+   * если сказать нечего, честно говорит, что просьбы не видно.
+   */
   function pickNeed(text, meta, modeName) {
-    const ls = lines(text);
-    const req = ls.filter((l) =>
-      /можешь|нужно|надо|подтверди|прошу|жду|глянь|созвон|пришли|сделай|успеешь|помо/i.test(l)
-    );
-    if (meta.fyi) return "Ничего срочного от тебя не требуется — только принять к сведению.";
-    if (req.length) return req.slice(0, 2).join(" | ");
-    if (meta.waitMe) return "Похоже, ждут твоего ответа или действия (по формулировкам в тексте).";
-    if (modeName === "news") return "Ничего «от тебя» — только понять, что важно знать.";
-    if (modeName === "docs") return "Проверить противоречия и зафиксировать единый scope/сроки.";
-    return "Прямого запроса не видно — уточни одной фразой: «Что нужно от меня и к какому сроку?»";
+    if (meta.fyi) return "Ничего не нужно — просто прочитать.";
+    if (modeName === "news") return "Ничего не нужно — это чтение для себя.";
+    if (modeName === "docs") return "Свести противоречия в документе к одному варианту.";
+
+    const t = text.toLowerCase();
+    const bits = [];
+
+    if (/созвон|созвонимся|позвони|call me/i.test(t)) bits.push("созвониться");
+    if (/глян|посмотри|анкет|файл|документ/i.test(t)) bits.push("посмотреть файл");
+    if (/подтверди|confirm|успеешь/i.test(t)) bits.push("подтвердить срок");
+    if (/правк/i.test(t)) bits.push("внести правки");
+    if (/жду статус|статус/i.test(t) && (modeName === "work" || /клиент/i.test(t)))
+      bits.push("дать статус");
+    if (/нужна твоя помощь|прям нужна|помоги|помочь/i.test(t)) bits.push("помочь");
+    if (/блок|доступ|figma/i.test(t) && modeName === "work") bits.push("снять блокер");
+    if (meta.money.length && /долг|верни|вернуть|верну|отда/i.test(t))
+      bits.push("решить по деньгам (" + meta.money[0] + ")");
+
+    const uniq = [];
+    for (const b of bits) {
+      if (!uniq.some((u) => u.includes(b) || b.includes(u))) uniq.push(b);
+      if (uniq.length >= 3) break;
+    }
+
+    if (!uniq.length) {
+      return meta.waitMe
+        ? "Ждут твоего ответа, но конкретной просьбы в тексте нет."
+        : "Просьбы к тебе не видно — можно не отвечать.";
+    }
+
+    let need = uniq.join(", ");
+    need = need.charAt(0).toUpperCase() + need.slice(1);
+    if (meta.deadlines.length) need += " — до «" + meta.deadlines[0] + "»";
+    return need + ".";
   }
 
   function buildTodos(text, meta, modeName) {
@@ -397,19 +427,22 @@
       return "Ха, видел) Жив-здоров. Давай на следующей неделе созвонимся/увидимся — кину слоты.";
     }
 
-    const dl = meta.deadlines[0] ? ` по сроку «${meta.deadlines[0]}»` : "";
+    const dl = meta.deadlines[0] ? ` к «${meta.deadlines[0]}»` : "";
     if (modeName === "work") {
       if (meta.waitMe) {
-        return `Принял. По статусу${dl}:\n1) Что уже сделано: …\n2) Что успею к сроку: …\n3) Где риск/блокер: …\nЕсли ок — двигаю, если нет — предложу сдвиг с причиной.`;
+        return `Принял, беру в работу${dl}. Сегодня пришлю статус: что готово и что успеваю к сроку. Если увижу риск не успеть — скажу сразу, не в последний момент.`;
       }
-      return `Спасибо, в курсе. Уточните, пожалуйста: что нужно от меня и к какому времени? Тогда зафиксирую и вернусь со статусом.`;
+      return `Спасибо, вижу. Уточни, пожалуйста, что нужно от меня и к какому времени — зафиксирую и вернусь со статусом.`;
     }
 
     // personal
-    if (/созвон|вечером|минут/i.test(text)) {
-      return `Могу сегодня после 20:00 минут на 30 — ок? Если нет, напиши другой слот. Анкету/файл кидай сюда, гляну.\nПо долгу: да, в пятницу ок.`;
+    if (/созвон|вечером|минут|позвони/i.test(text)) {
+      return `Привет! Да, я тут. Давай сегодня после 20:00, минут на 30 — удобно? Если нет, напиши, когда тебе лучше. Файл кидай сюда, посмотрю.`;
     }
-    return `Понял запрос${dl}. Могу помочь так: … (время/формат). Если не успеваю — сразу скажу и предложу альтернативу.`;
+    if (meta.money.length && /долг|верни|вернуть|верну|отда/i.test(text)) {
+      return `Привет! Понял тебя${dl}. Помогу — давай спишемся вечером и разберём. По ${meta.money[0]} тоже решим, не переживай.`;
+    }
+    return `Привет! Понял${dl}. Помогу — скажи, когда тебе удобно созвониться или напиши подробнее, и я включусь.`;
   }
 
   function summarizeBullets(text, max) {
@@ -504,20 +537,9 @@
       toast("Вставь текст подлиннее");
       return;
     }
-    const role = $("#role-select").value;
-    setView("process");
-    $("#tg-sub").textContent = "processing…";
-    const steps = [
-      ["INGEST", "Читаю поток…"],
-      ["TRIAGE", "Вешаю важность P0–P3…"],
-      ["NEED", "Ищу, что от тебя нужно…"],
-      ["DRAFT", "Собираю черновик…"],
-    ];
-    for (const [a, b] of steps) {
-      $("#process-title").textContent = a;
-      $("#process-line").textContent = b;
-      await new Promise((r) => setTimeout(r, 380));
-    }
+    // Без искусственной задержки: разбор мгновенный, скорость — и есть смысл.
+    const roleEl = $("#role-select");
+    const role = roleEl ? roleEl.value : "me";
     lastResult = analyze(text, mode, role);
     paintResult(lastResult);
     setView("result");
@@ -525,21 +547,30 @@
   }
 
   function paintResult(r) {
-    $("#result-mode").textContent = MODE_META[r.mode]?.label || r.mode;
-    const ban = $("#priority-banner");
-    ban.className = "priority-banner " + r.priority.cls;
-    $("#p-code").textContent = r.priority.code;
-    $("#p-name").textContent = r.priority.name;
-    $("#p-why").textContent = r.why;
-    $("#flags").innerHTML = r.flags.map((f) => `<span class="flag ${f.c}">${f.t}</span>`).join("");
-    $("#context-text").textContent = r.context;
-    $("#need-text").textContent = r.need;
-    $("#todo-list").innerHTML = r.todos
-      .map((t) => `<li><span class="tag ${t.tag}">${t.tag === "do" ? "СЕЙЧАС" : t.tag === "later" ? "ПОТОМ" : "СКИП"}</span><span>${t.text}</span></li>`)
-      .join("");
-    $("#reply-text").textContent = r.reply;
-    $("#bullets-label").textContent = r.bulletsLabel;
-    $("#bullets").innerHTML = r.bullets.map((b) => `<li>${escapeHtml(b)}</li>`).join("");
+    const set = (sel, fn) => { const el = $(sel); if (el) fn(el); };
+
+    set("#result-mode", (el) => { el.textContent = MODE_META[r.mode]?.label || r.mode; });
+    set("#priority-banner", (el) => { el.className = "priority-banner " + r.priority.cls; });
+    set("#p-code", (el) => { el.textContent = r.priority.code; });
+    set("#p-name", (el) => { el.textContent = r.priority.name; });
+    set("#p-why", (el) => { el.textContent = r.why; });
+    set("#flags", (el) => {
+      el.innerHTML = r.flags.map((f) => `<span class="flag ${f.c}">${f.t}</span>`).join("");
+    });
+    set("#need-text", (el) => { el.textContent = r.need; });
+    set("#reply-text", (el) => { el.textContent = r.reply; });
+
+    // Блоки ниже удалены из интерфейса как дублирующие исходный текст.
+    set("#context-text", (el) => { el.textContent = r.context; });
+    set("#todo-list", (el) => {
+      el.innerHTML = r.todos
+        .map((t) => `<li><span class="tag ${t.tag}">${t.tag === "do" ? "СЕЙЧАС" : t.tag === "later" ? "ПОТОМ" : "СКИП"}</span><span>${escapeHtml(t.text)}</span></li>`)
+        .join("");
+    });
+    set("#bullets-label", (el) => { el.textContent = r.bulletsLabel; });
+    set("#bullets", (el) => {
+      el.innerHTML = r.bullets.map((b) => `<li>${escapeHtml(b)}</li>`).join("");
+    });
   }
 
   function escapeHtml(s) {
@@ -727,16 +758,23 @@
       setView("input");
       $("#tg-sub").textContent = `v2 · ${MODE_META[mode].label.toLowerCase()}`;
     });
-    $("#btn-copy-reply").addEventListener("click", () => {
+    const copyReply = () => {
       if (!lastResult) return;
       copy(lastResult.reply);
-      toast("Черновик скопирован");
+      toast("Ответ скопирован — вставляй в чат");
+    };
+    ["#btn-copy-reply", "#btn-copy-reply-2"].forEach((sel) => {
+      const el = $(sel);
+      if (el) el.addEventListener("click", copyReply);
     });
-    $("#btn-copy-all").addEventListener("click", () => {
-      if (!lastResult) return;
-      copy(fullDump(lastResult));
-      toast("Весь разбор скопирован");
-    });
+    const btnAll = $("#btn-copy-all");
+    if (btnAll) {
+      btnAll.addEventListener("click", () => {
+        if (!lastResult) return;
+        copy(fullDump(lastResult));
+        toast("Весь разбор скопирован");
+      });
+    }
     $("#btn-save").addEventListener("click", saveCurrent);
     $("#vault-search").addEventListener("input", renderVault);
     $$("#vault-filters .chip").forEach((c) => {

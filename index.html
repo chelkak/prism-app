@@ -86,11 +86,9 @@
       </header>
 
       <nav class="modes" id="modes">
-        <button type="button" class="mode active" data-mode="personal">Сообщение</button>
+        <button type="button" class="mode active" data-mode="personal">Личное</button>
         <button type="button" class="mode" data-mode="work">Работа</button>
-        <button type="button" class="mode" data-mode="news">Новости</button>
         <button type="button" class="mode" data-mode="vault">Заметки</button>
-        <button type="button" class="mode" data-mode="docs">Документ</button>
       </nav>
 
       <div class="viewport">
@@ -106,16 +104,7 @@
             <button type="button" class="btn primary" id="btn-run" disabled>Сделать ясно</button>
           </div>
 
-          <div class="role-row" id="role-row">
-            <span class="mono dim">Ты в тексте:</span>
-            <select id="role-select">
-              <option value="me">мне пишут</option>
-              <option value="member">участник</option>
-              <option value="lead">ответственный</option>
-            </select>
-          </div>
-
-          <p class="fine mono">Скоро: переслал боту — без копирования. Сейчас: вставь текст. Не сдаёмся.</p>
+          <p class="fine mono">Быстрее всего — переслать сообщение боту @xPRISMxbot: без копирования.</p>
         </section>
 
         <section class="view" id="view-process" data-view="process">
@@ -144,37 +133,22 @@
 
           <div class="flags" id="flags"></div>
 
-          <article class="card">
-            <div class="mono label">КОНТЕКСТ</div>
-            <p id="context-text" class="body-text">—</p>
-          </article>
-
           <article class="card accent" id="need-card">
-            <div class="mono label">ЧТО ОТ ТЕБЯ НУЖНО</div>
+            <div class="mono label">ЧТО ОТ ТЕБЯ ХОТЯТ</div>
             <p id="need-text" class="body-text strong">—</p>
-          </article>
-
-          <article class="card">
-            <div class="mono label">СДЕЛАТЬ / ОТЛОЖИТЬ</div>
-            <ul class="todo" id="todo-list"></ul>
           </article>
 
           <article class="card" id="reply-card">
             <div class="row-between">
-              <div class="mono label">ЧЕРНОВИК</div>
+              <div class="mono label">ОТВЕТ — МОЖНО ОТПРАВЛЯТЬ</div>
               <button type="button" class="linkish" id="btn-copy-reply">копировать</button>
             </div>
             <pre id="reply-text" class="reply-pre">—</pre>
           </article>
 
-          <article class="card" id="bullets-card">
-            <div class="mono label" id="bullets-label">ФРАГМЕНТЫ</div>
-            <ul class="bullets" id="bullets"></ul>
-          </article>
-
           <div class="result-actions">
-            <button type="button" class="btn primary block" id="btn-save">Сохранить в заметки</button>
-            <button type="button" class="btn ghost block" id="btn-copy-all">Скопировать всё</button>
+            <button type="button" class="btn primary block" id="btn-copy-reply-2">Скопировать ответ</button>
+            <button type="button" class="btn ghost block" id="btn-save">Сохранить в заметки</button>
           </div>
         </section>
 
