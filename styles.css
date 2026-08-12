@@ -483,6 +483,96 @@ select {
 .todo .tag.later { background: rgba(126, 141, 155, 0.20); color: #a3b3c0; }
 .todo .tag.skip { background: rgba(106, 112, 117, 0.30); color: #a4aab0; }
 
+/* ——— Главный экран: сводка сверху, дела ниже ——— */
+.board {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-bottom: 22px;
+}
+.cell {
+  padding: 16px 10px;
+  border-radius: 16px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  text-align: center;
+  transition: border-color 0.18s ease, background 0.18s ease;
+}
+.cell:hover { border-color: var(--line-strong); }
+.cell.active {
+  border-color: rgba(217, 198, 164, 0.45);
+  background: rgba(217, 198, 164, 0.07);
+}
+.cell-n {
+  display: block;
+  font-size: 26px;
+  font-weight: 300;
+  letter-spacing: -0.01em;
+  color: var(--steel-hi);
+  line-height: 1.1;
+}
+.cell-t {
+  display: block;
+  font-size: 11px;
+  color: var(--dim);
+  margin-top: 5px;
+}
+.cell[data-filter="hot"] .cell-n { color: var(--p0); }
+
+.inbox-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 4px;
+  font-size: 13px;
+  color: var(--muted);
+}
+.inbox-head .linkish { font-size: 11.5px; color: var(--dim); }
+
+.empty-hint {
+  text-align: center;
+  font-size: 13.5px;
+  line-height: 1.7;
+  color: var(--dim);
+  padding: 44px 20px;
+}
+
+.q-item.hot { border-left: 2px solid var(--p0); padding-left: 11px; }
+.tag-hot {
+  display: inline-block;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--p0);
+  margin-bottom: 4px;
+}
+
+/* Кнопка в форме знака-призмы — главное действие */
+.fab {
+  position: fixed;
+  left: 50%;
+  bottom: 26px;
+  transform: translateX(-50%);
+  z-index: 40;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 0;
+}
+.fab .mark-svg {
+  width: 52px;
+  height: 52px;
+  filter: drop-shadow(0 8px 24px rgba(0, 0, 0, 0.6));
+  transition: transform 0.16s ease;
+}
+.fab:active .mark-svg { transform: scale(0.94); }
+.fab-hint {
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  color: var(--dim);
+}
+
 /* Экран очереди: число сверху, до 5 строк, честный хвост. */
 .q-count {
   font-size: 19px;

@@ -69,16 +69,47 @@
       </header>
 
       <div class="viewport">
-        <section class="view active" id="view-input" data-view="input">
-          <textarea id="raw-input" rows="9" placeholder="Вставь сюда сообщение или переписку"></textarea>
+        <!-- ГЛАВНЫЙ ЭКРАН: сводка сверху, дела ниже -->
+        <section class="view active" id="view-home" data-view="home">
+          <div class="board" id="board">
+            <button type="button" class="cell" data-filter="hot">
+              <span class="cell-n" id="n-hot">0</span>
+              <span class="cell-t">Срочно</span>
+            </button>
+            <button type="button" class="cell" data-filter="wait">
+              <span class="cell-n" id="n-wait">0</span>
+              <span class="cell-t">Ждут ответа</span>
+            </button>
+            <button type="button" class="cell" data-filter="all">
+              <span class="cell-n" id="n-all">0</span>
+              <span class="cell-t">Всего</span>
+            </button>
+          </div>
 
-          <button type="button" class="btn primary block" id="btn-run" disabled>Разобрать</button>
-          <button type="button" class="linkish sub" id="btn-clipboard">Вставить из буфера</button>
+          <div class="inbox-head">
+            <span id="inbox-title">Дела</span>
+            <button type="button" class="linkish" id="btn-clear-done">очистить сделанные</button>
+          </div>
+
+          <div id="inbox-list"></div>
+          <p class="empty-hint hidden" id="inbox-empty">
+            Пока пусто.<br />Нажми ✦ внизу и вставь сообщения — они появятся здесь.
+          </p>
 
           <div class="foot-links">
             <button type="button" class="linkish" data-mode="vault">Заметки</button>
             <button type="button" class="linkish hidden" id="week-line"></button>
           </div>
+        </section>
+
+        <!-- ЭКРАН ВВОДА -->
+        <section class="view" id="view-input" data-view="input">
+          <div class="result-top">
+            <button type="button" class="linkish" id="btn-back-in">← Назад</button>
+          </div>
+          <textarea id="raw-input" rows="9" placeholder="Вставь сюда сообщение или переписку"></textarea>
+          <button type="button" class="btn primary block" id="btn-run" disabled>Разобрать</button>
+          <button type="button" class="linkish sub" id="btn-clipboard">Вставить из буфера</button>
         </section>
 
         <section class="view" id="view-process" data-view="process">
@@ -162,6 +193,12 @@
       </symbol>
     </defs>
   </svg>
+
+  <!-- Кнопка в форме знака-призмы: главное действие -->
+  <button type="button" class="fab" id="btn-add" title="Разобрать">
+    <svg viewBox="0 0 64 64" class="mark-svg"><use href="#prism-mark"/></svg>
+    <span class="fab-hint">Разобрать</span>
+  </button>
 
   <div class="toast hidden" id="toast"></div>
   <script src="queue.js" defer></script>

@@ -583,6 +583,118 @@
     return !!(window.PrismQueue && window.PrismQueue.splitItems);
   }
 
+  // ——— Накопительный список дел ———
+  // Без него приложение — калькулятор: открыл, посчитал, всё исчезло.
+  // С ним это рабочее место, куда возвращаются.
+
+  const INBOX_KEY = "prism_inbox_v1";
+  let inboxFilter = "all";
+
+  function loadInbox() {
+    try {
+      return JSON.parse(localStorage.getItem(INBOX_KEY) || "[]");
+    } catch (_) {
+      return [];
+    }
+  }
+
+  function saveInbox(items) {
+    try {
+      localStorage.setItem(INBOX_KEY, JSON.stringify(items.slice(0, 500)));
+    } catch (_) {}
+  }
+
+  /** Кладём разобранное в список дел. Возвращает, сколько добавили. */
+  function addToInbox(entries) {
+    const all = loadInbox();
+    const now = Date.now();
+    entries.forEach((e, i) => {
+      all.unshift({
+        id: String(now + i),
+        who: e.who || "",
+        what: e.what || "",
+        why: e.why || "",
+        hot: !!e.hot,
+        wait: !!e.wait,
+        done: false,
+        createdAt: now,
+      });
+    });
+    saveInbox(all);
+    renderInbox();
+    return entries.length;
+  }
+
+  function renderInbox() {
+    const all = loadInbox();
+    const live = all.filter((i) => !i.done);
+
+    const nHot = live.filter((i) => i.hot).length;
+    const nWait = live.filter((i) => i.wait && !i.hot).length;
+    const set = (sel, v) => { const el = $(sel); if (el) el.textContent = v; };
+    set("#n-hot", nHot);
+    set("#n-wait", nWait);
+    set("#n-all", live.length);
+
+    $$("#board .cell").forEach((c) =>
+      c.classList.toggle("active", c.dataset.filter === inboxFilter)
+    );
+
+    let shown = live;
+    if (inboxFilter === "hot") shown = live.filter((i) => i.hot);
+    if (inboxFilter === "wait") shown = live.filter((i) => i.wait && !i.hot);
+
+    const list = $("#inbox-list");
+    const empty = $("#inbox-empty");
+    if (!list) return;
+
+    if (!shown.length) {
+      list.innerHTML = "";
+      if (empty) {
+        empty.classList.remove("hidden");
+        empty.innerHTML = all.length
+          ? "Здесь пусто — всё разобрано."
+          : "Пока пусто.<br />Нажми ✦ внизу и вставь сообщения — они появятся здесь.";
+      }
+      return;
+    }
+    if (empty) empty.classList.add("hidden");
+
+    list.innerHTML = shown
+      .map(
+        (i) => `<article class="q-item${i.hot ? " hot" : ""}" data-id="${i.id}">
+          ${i.hot ? '<span class="tag-hot">срочно</span>' : ""}
+          <div class="q-who">${escapeHtml(i.who || "Без отправителя")}</div>
+          <div class="q-what">${escapeHtml(i.what)}</div>
+          ${i.why ? `<div class="q-why">${escapeHtml(i.why)}</div>` : ""}
+          <button type="button" class="q-done" data-inbox-done="${i.id}">Готово</button>
+        </article>`
+      )
+      .join("");
+
+    $$("#inbox-list [data-inbox-done]").forEach((b) => {
+      b.addEventListener("click", () => inboxDone(b.dataset.inboxDone));
+    });
+  }
+
+  function inboxDone(id) {
+    const all = loadInbox();
+    const it = all.find((x) => x.id === id);
+    if (!it) return;
+    it.done = true;
+    saveInbox(all);
+    bumpStat("done");
+    renderInbox();
+    offerUndo("Сделано.", () => {
+      const back = loadInbox();
+      const b = back.find((x) => x.id === id);
+      if (b) b.done = false;
+      saveInbox(back);
+      bumpStat("done", -1);
+      renderInbox();
+    });
+  }
+
   // ——— Разобранное, отмена, недельный итог ———
 
   let lastQueue = null;
@@ -738,8 +850,22 @@
         lastQueue = window.PrismQueue.analyzeQueue(items);
         bumpStat("parsed");
         bumpStat("items", items.length);
-        paintQueue(lastQueue);
-        setView("queue");
+        // Результат остаётся в списке дел — не исчезает при закрытии.
+        addToInbox(
+          lastQueue.need.map((it) => ({
+            who: it.sender !== "без отправителя" ? it.sender : "",
+            what: clip(it.text, 90),
+            why: cap((it.why || []).slice(0, 2).join(" · ")),
+            // «Срочно» — только деньги или явный срок. «Ждут» есть у всех,
+            // по нему метка перестаёт что-либо значить.
+            hot: (it.why || []).some((w) => /^срок:|^деньги:/i.test(w)),
+            wait: true,
+          }))
+        );
+        $("#raw-input").value = "";
+        $("#btn-run").disabled = true;
+        setView("home");
+        toast(`Добавлено дел: ${lastQueue.need.length}. Рассылок отсеяно: ${lastQueue.robots.length}`);
         return;
       }
     }
@@ -749,6 +875,13 @@
     const roleEl = $("#role-select");
     const role = roleEl ? roleEl.value : "me";
     lastResult = analyze(text, mode, role);
+    addToInbox([{
+      who: "",
+      what: lastResult.need,
+      why: lastResult.priority.name,
+      hot: lastResult.priority.cls === "p0",
+      wait: !!lastResult.flags.find((f) => f.t === "ждут меня"),
+    }]);
     paintResult(lastResult);
     setView("result");
     
@@ -998,7 +1131,7 @@
       });
     }
     $("#btn-back").addEventListener("click", () => {
-      setView("input");
+      setView("home");
       
     });
     const copyReply = () => {
@@ -1006,6 +1139,33 @@
       copy(lastResult.reply);
       toast("Ответ скопирован — вставляй в чат");
     };
+    const fab = $("#btn-add");
+    if (fab) fab.addEventListener("click", () => {
+      setView("input");
+      const ta = $("#raw-input");
+      if (ta) ta.focus();
+    });
+
+    const backIn = $("#btn-back-in");
+    if (backIn) backIn.addEventListener("click", () => setView("home"));
+
+    $$("#board .cell").forEach((c) => {
+      c.addEventListener("click", () => {
+        inboxFilter = inboxFilter === c.dataset.filter ? "all" : c.dataset.filter;
+        renderInbox();
+      });
+    });
+
+    const clearDone = $("#btn-clear-done");
+    if (clearDone) clearDone.addEventListener("click", () => {
+      const all = loadInbox();
+      const kept = all.filter((i) => !i.done);
+      const removed = all.length - kept.length;
+      saveInbox(kept);
+      renderInbox();
+      toast(removed ? `Убрано сделанных: ${removed}` : "Сделанных пока нет");
+    });
+
     const weekBtn = $("#week-line");
     if (weekBtn) weekBtn.addEventListener("click", () => {
       copy(weekShareText());
@@ -1013,7 +1173,7 @@
     });
 
     const btnBackQ = $("#btn-back-q");
-    if (btnBackQ) btnBackQ.addEventListener("click", () => setView("input"));
+    if (btnBackQ) btnBackQ.addEventListener("click", () => setView("home"));
 
     const btnCopy = $("#btn-copy-reply");
     if (btnCopy) btnCopy.addEventListener("click", copyReply);
@@ -1042,6 +1202,8 @@
       tick();
       setInterval(tick, 1000);
       setMode("personal");
+    setView("home");
+    renderInbox();
     renderWeek();
     } catch (err) {
       console.error("PRISM init error", err);
