@@ -191,7 +191,18 @@ button { border: 0; background: none; cursor: pointer; }
   background: rgba(13, 14, 16, 0.92);
   backdrop-filter: blur(12px);
 }
-.tg-left { display: flex; gap: 10px; align-items: center; }
+/* Шапка кликабельна — всегда возвращает домой */
+.tg-left {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  padding: 4px 8px 4px 4px;
+  margin: -4px -8px -4px -4px;
+  border-radius: 12px;
+  transition: background 0.16s ease;
+}
+.tg-left:hover { background: rgba(196, 206, 214, 0.06); }
+.tg-left:active { background: rgba(196, 206, 214, 0.1); }
 .tg-mark {
   width: 28px; height: 28px;
   display: grid; place-items: center;

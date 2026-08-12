@@ -112,24 +112,9 @@
           <button type="button" class="linkish sub" id="btn-clipboard">Вставить из буфера</button>
         </section>
 
-        <section class="view" id="view-process" data-view="process">
-          <div class="process-center">
-            <div class="process-mark">
-              <svg viewBox="0 0 64 64" class="mark-svg md"><use href="#prism-mark"/></svg>
-            </div>
-            <p class="process-title mono" id="process-title">REFRACT</p>
-            <p class="process-line" id="process-line">Преломляю поток…</p>
-          </div>
-        </section>
+        
 
-        <section class="view" id="view-queue" data-view="queue">
-          <div class="result-top">
-            <button type="button" class="linkish" id="btn-back-q">← Назад</button>
-          </div>
-          <p class="q-count" id="q-count">—</p>
-          <div id="q-list"></div>
-          <p class="q-tail" id="q-tail"></p>
-        </section>
+        
 
         <section class="view" id="view-result" data-view="result">
           <div class="result-top">
@@ -147,7 +132,8 @@
           <pre id="reply-text" class="reply-pre">—</pre>
 
           <button type="button" class="btn primary block" id="btn-copy-reply">Скопировать ответ</button>
-          <button type="button" class="linkish sub" id="btn-save">Сохранить</button>
+          <button type="button" class="btn ghost block" id="btn-card-done">Готово</button>
+          <button type="button" class="linkish sub" id="btn-save">Сохранить в заметки</button>
         </section>
 
         <section class="view" id="view-vault" data-view="vault">
@@ -159,9 +145,7 @@
           <div class="vault-filters" id="vault-filters">
             <button type="button" class="chip active" data-filter="all">Все</button>
             <button type="button" class="chip" data-filter="work">Работа</button>
-            <button type="button" class="chip" data-filter="personal">Личка</button>
-            <button type="button" class="chip" data-filter="news">Новости</button>
-            <button type="button" class="chip" data-filter="docs">Доки</button>
+            <button type="button" class="chip" data-filter="personal">Личное</button>
           </div>
           <div id="vault-list" class="vault-list"></div>
           <p class="fine mono" id="vault-empty">Пусто. Сделай ясно → «Сохранить в заметки».</p>

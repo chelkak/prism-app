@@ -450,7 +450,7 @@
       if (/боль|болел|врач|больниц|стоматолог|устал|тяжко|плохо/i.test(text)) {
         return "Ох, сочувствую. Держись! Как сейчас себя чувствуешь?";
       }
-      return "Понял тебя) Спасибо, что рассказал. Давай на связи.";
+      return "";
     }
 
     // Коротко. Ответ должен читаться за секунду и отправляться как есть.
@@ -618,6 +618,12 @@
         wait: !!e.wait,
         done: false,
         createdAt: now,
+        // Храним разбор целиком: по нажатию открываем карточку с ответом.
+        need: e.need || e.what || "",
+        reply: e.reply || "",
+        raw: (e.raw || "").slice(0, 1500),
+        verdict: e.verdict || "",
+        cls: e.cls || "p2",
       });
     });
     saveInbox(all);
@@ -673,8 +679,49 @@
       .join("");
 
     $$("#inbox-list [data-inbox-done]").forEach((b) => {
-      b.addEventListener("click", () => inboxDone(b.dataset.inboxDone));
+      b.addEventListener("click", (e) => {
+        e.stopPropagation();
+        inboxDone(b.dataset.inboxDone);
+      });
     });
+
+    // Нажатие на дело открывает карточку с готовым ответом.
+    $$("#inbox-list .q-item").forEach((el) => {
+      el.addEventListener("click", () => openInboxItem(el.dataset.id));
+    });
+  }
+
+  /** Открыть дело: тот же экран карточки, но из накопленного списка. */
+  function openInboxItem(id) {
+    const it = loadInbox().find((x) => x.id === id);
+    if (!it) return;
+
+    // Ответа могло не быть (просьбы нет) — тогда пересчитаем на лету.
+    let reply = it.reply;
+    let need = it.need || it.what;
+    if (!reply && it.raw) {
+      const r = analyze(it.raw, "auto", "me");
+      reply = r.reply;
+      need = r.need;
+    }
+
+    lastResult = {
+      mode: "personal",
+      priority: { code: "", name: it.verdict || "Дело", cls: it.cls || "p2" },
+      why: "",
+      flags: [],
+      context: "",
+      need: need,
+      todos: [],
+      reply: reply || "",
+      bullets: [],
+      bulletsLabel: "",
+      raw: it.raw || "",
+      createdAt: it.createdAt,
+      inboxId: it.id,
+    };
+    paintResult(lastResult);
+    setView("result");
   }
 
   function inboxDone(id) {
@@ -852,15 +899,22 @@
         bumpStat("items", items.length);
         // Результат остаётся в списке дел — не исчезает при закрытии.
         addToInbox(
-          lastQueue.need.map((it) => ({
+          lastQueue.need.map((it) => {
+            const r = analyze(it.text, "auto", "me");
+            return {
             who: it.sender !== "без отправителя" ? it.sender : "",
             what: clip(it.text, 90),
             why: cap((it.why || []).slice(0, 2).join(" · ")),
+            need: r.need,
+            reply: r.reply,
+            raw: it.text,
+            verdict: r.priority.name,
+            cls: r.priority.cls,
             // «Срочно» — только деньги или явный срок. «Ждут» есть у всех,
             // по нему метка перестаёт что-либо значить.
             hot: (it.why || []).some((w) => /^срок:|^деньги:/i.test(w)),
             wait: true,
-          }))
+          };})
         );
         $("#raw-input").value = "";
         $("#btn-run").disabled = true;
@@ -879,6 +933,11 @@
       who: "",
       what: lastResult.need,
       why: lastResult.priority.name,
+      need: lastResult.need,
+      reply: lastResult.reply,
+      raw: text,
+      verdict: lastResult.priority.name,
+      cls: lastResult.priority.cls,
       hot: lastResult.priority.cls === "p0",
       wait: !!lastResult.flags.find((f) => f.t === "ждут меня"),
     }]);
@@ -897,6 +956,7 @@
       el.innerHTML = r.flags.map((f) => `<span class="flag ${f.c}">${f.t}</span>`).join("");
     });
     set("#need-text", (el) => { el.textContent = r.need; });
+    set("#btn-card-done", (el) => { el.style.display = r.inboxId ? "" : "none"; });
     const hasReply = !!(r.reply && r.reply.trim());
     set("#reply-text", (el) => {
       el.textContent = r.reply || "";
@@ -1139,6 +1199,15 @@
       copy(lastResult.reply);
       toast("Ответ скопирован — вставляй в чат");
     };
+    const homeBtn = $(".tg-left");
+    if (homeBtn) {
+      homeBtn.style.cursor = "pointer";
+      homeBtn.addEventListener("click", () => {
+        setView("home");
+        renderInbox();
+      });
+    }
+
     const fab = $("#btn-add");
     if (fab) fab.addEventListener("click", () => {
       setView("input");
@@ -1164,6 +1233,12 @@
       saveInbox(kept);
       renderInbox();
       toast(removed ? `Убрано сделанных: ${removed}` : "Сделанных пока нет");
+    });
+
+    const cardDone = $("#btn-card-done");
+    if (cardDone) cardDone.addEventListener("click", () => {
+      if (lastResult && lastResult.inboxId) inboxDone(lastResult.inboxId);
+      setView("home");
     });
 
     const weekBtn = $("#week-line");
